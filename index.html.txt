@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Binary Tree Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #a855f7;
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-color: #f8fafc;
+            --node-color: #6366f1;
+            --line-color: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header & Controls */
+        header {
+            padding: 20px;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: white;
+            outline: none;
+            width: 100px;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.3s;
+            background: var(--primary-color);
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        button.secondary {
+            background: #ef4444;
+        }
+
+        button.secondary:hover {
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Canvas Area */
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 50px;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Instructions */
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Binary Tree Visualizer</h2>
+        <div class="controls">
+            <input type="number" id="nodeValue" placeholder="ระบุเลข">
+            <button onclick="addNode()">เพิ่ม Node</button>
+            <button class="secondary" onclick="resetTree()">ล้างค่า</button>
+        </div>
+    </header>
+
+    <div id="canvas-container">
+        <canvas id="treeCanvas"></canvas>
+    </div>
+
+    <div class="info">
+        • ป้อนตัวเลขเพื่อสร้าง Binary Search Tree<br>
+        • ระบบจะจัดวางตำแหน่งให้อัตโนมัติ
+    </div>
+
+    <script>
+        const canvas = document.getElementById('treeCanvas');
+        const ctx = canvas.getContext('2d');
+        const input = document.getElementById('nodeValue');
+
+        class Node {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
+                this.x = 0;
+                this.y = 0;
+            }
+        }
+
+        let root = null;
+        const nodeRadius = 25;
+        const verticalSpacing = 80;
+
+        function addNode() {
+            const val = parseInt(input.value);
+            if (isNaN(val)) return;
+
+            if (!root) {
+                root = new Node(val);
+            } else {
+                insertNode(root, val);
+            }
+            input.value = '';
+            draw();
+        }
+
+        function insertNode(node, val) {
+            if (val < node.value) {
+                if (!node.left) node.left = new Node(val);
+                else insertNode(node.left, val);
+            } else if (val > node.value) {
+                if (!node.right) node.right = new Node(val);
+                else insertNode(node.right, val);
+            }
+        }
+
+        function resetTree() {
+            root = null;
+            draw();
+        }
+
+        function draw() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 100;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (root) {
+                // คำนวณตำแหน่งและวาดเส้นเชื่อมก่อน (เพื่อให้เส้นอยู่ใต้ Node)
+                drawConnections(root, canvas.width / 2, 50, canvas.width / 4);
+                // วาดตัว Node
+                drawNodes(root, canvas.width / 2, 50, canvas.width / 4);
+            }
+        }
+
+        function drawConnections(node, x, y, horizontalSpacing) {
+            if (node.left) {
+                const nextX = x - horizontalSpacing;
+                const nextY = y + verticalSpacing;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(nextX, nextY);
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                drawConnections(node.left, nextX, nextY, horizontalSpacing / 1.8);
+            }
+            if (node.right) {
+                const nextX = x + horizontalSpacing;
+                const nextY = y + verticalSpacing;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(nextX, nextY);
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                drawConnections(node.right, nextX, nextY, horizontalSpacing / 1.8);
+            }
+        }
+
+        function drawNodes(node, x, y, horizontalSpacing) {
+            // เงาของ Node
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(99, 102, 241, 0.5)';
+
+            // วาดวงกลม Node
+            const gradient = ctx.createRadialGradient(x, y, 5, x, y, nodeRadius);
+            gradient.addColorStop(0, '#818cf8');
+            gradient.addColorStop(1, '#6366f1');
+
+            ctx.beginPath();
+            ctx.arc(x, y, nodeRadius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // ปิดเงาสำหรับตัวอักษร
+            ctx.shadowBlur = 0;
+
+            // วาดตัวเลข
+            ctx.fillStyle = "white";
+            ctx.font = "bold 16px Kanit";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(node.value, x, y);
+
+            if (node.left) {
+                drawNodes(node.left, x - horizontalSpacing, y + verticalSpacing, horizontalSpacing / 1.8);
+            }
+            if (node.right) {
+                drawNodes(node.right, x + horizontalSpacing, y + verticalSpacing, horizontalSpacing / 1.8);
+            }
+        }
+
+        // ฟังการกด Enter
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") addNode();
+        });
+
+        // ปรับขนาด Canvas เมื่อยืดขยายหน้าจอ
+        window.onresize = draw;
+        draw();
+    </script>
+</body>
+</html>
